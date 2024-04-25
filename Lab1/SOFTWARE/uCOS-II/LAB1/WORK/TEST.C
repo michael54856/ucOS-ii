@@ -42,7 +42,7 @@ OS_EVENT     *RandomSem;
 //=================================================LAB_1=================================================
         void  Task1(void *data);                       
 		void  Task2(void *data);                       
-		//void  Task3(void *data);                     
+		void  Task3(void *data);                     
         void  TaskStart(void *data);                  
 static  void  TaskStartCreateTasks(void);
 
@@ -165,14 +165,10 @@ void  Task1 (void *pdata)
 	{
 		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
 		{
-
-			if(deadTask != 0 && stopAllTask == 0)
+			if(stopAllTask == 1)
 			{
-				stopAllTask = 1;
-				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
 				break;
 			}
-			
 			
 			while(printBuffer.rear != printBuffer.front)
 			{
@@ -185,7 +181,14 @@ void  Task1 (void *pdata)
 					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
 				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
-			}               
+			}      
+
+			if(deadTask != 0 && stopAllTask == 0)
+			{
+				stopAllTask = 1;
+				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
+				break;
+			}
 		}
 		
 		if(stopAllTask == 1)
@@ -235,14 +238,10 @@ void  Task2 (void *pdata)
 	{
 		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
 		{
-
-			if(deadTask != 0 && stopAllTask == 0)
+			if(stopAllTask == 1)
 			{
-				stopAllTask = 1;
-				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
 				break;
 			}
-			
 			
 			while(printBuffer.rear != printBuffer.front)
 			{
@@ -255,7 +254,14 @@ void  Task2 (void *pdata)
 					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
 				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
-			}               
+			}      
+
+			if(deadTask != 0 && stopAllTask == 0)
+			{
+				stopAllTask = 1;
+				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
+				break;
+			}
 		}
 		
 		if(stopAllTask == 1)
@@ -305,14 +311,10 @@ void  Task3 (void *pdata)
 	{
 		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
 		{
-
-			if(deadTask != 0 && stopAllTask == 0)
+			if(stopAllTask == 1)
 			{
-				stopAllTask = 1;
-				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
 				break;
 			}
-			
 			
 			while(printBuffer.rear != printBuffer.front)
 			{
@@ -325,7 +327,14 @@ void  Task3 (void *pdata)
 					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
 				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
-			}               
+			}      
+
+			if(deadTask != 0 && stopAllTask == 0)
+			{
+				stopAllTask = 1;
+				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
+				break;
+			}
 		}
 		
 		if(stopAllTask == 1)
