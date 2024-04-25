@@ -202,7 +202,21 @@
 #define OS_FLAG_GRP_DEPLETED    154
 
 
+//=================================================LAB_1=================================================
 
+#define          MAX_PRINT_BUFFER           16                 
+typedef struct 
+{
+    INT16U  timeStamp[MAX_PRINT_BUFFER];
+    INT8U   from[MAX_PRINT_BUFFER];
+    INT8U   to[MAX_PRINT_BUFFER];
+    INT8U   isPreempted[MAX_PRINT_BUFFER];
+    INT16U  rear;
+    INT16U  front;
+} PRINT_BUFFER;
+
+
+//=================================================LAB_1=================================================
 
 
 /*$PAGE*/
@@ -412,7 +426,6 @@ typedef struct os_tcb {
 	INT16U         compTime;          
 	INT16U         period;   
 	INT16U         deadline;  
-	INT16U         jobDone;  
 
 #if OS_TASK_DEL_EN > 0
     BOOLEAN        OSTCBDelReq;        /* Indicates whether a task needs to delete itself              */

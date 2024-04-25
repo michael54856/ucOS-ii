@@ -26,24 +26,12 @@
 *********************************************************************************************************
 */
 
+
 INT8U  const  OSMapTbl[]   = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
-
-
-extern INT16U timeStamp_1;
-extern INT16U needPrint_1;
-extern INT16U from_1;
-extern INT16U to_1;
-
-
-extern INT16U timeStamp_2;
-extern INT16U needPrint_2;
-extern INT16U from_2;
-extern INT16U to_2;
 
 extern INT16U deadTime;
 extern INT16U deadTask;
-
-
+extern PRINT_BUFFER printBuffer;
 /*
 *********************************************************************************************************
 *                                       PRIORITY RESOLUTION TABLE
@@ -205,20 +193,11 @@ void  OSIntExit (void)
                 OSCtxSwCtr++;                              /* Keep track of the number of ctx switches */
 				
 				
-				if(needPrint_1 == 0)
-				{
-					timeStamp_1  = OSTimeGet();
-					needPrint_1 = 1;
-					from_1 = OSPrioCur;
-					to_1 = OSPrioHighRdy;
-				}
-				else if(needPrint_2 == 0)
-				{
-					timeStamp_2  = OSTimeGet();
-					needPrint_2 = 1;
-					from_2 = OSPrioCur;
-					to_2 = OSPrioHighRdy;
-				}
+				printBuffer.from[printBuffer.front] = OSPrioCur;
+				printBuffer.to[printBuffer.front] = OSPrioHighRdy;
+				printBuffer.timeStamp[printBuffer.front] = OSTimeGet();
+				printBuffer.isPreempted[printBuffer.front] = 1;
+				printBuffer.front = (printBuffer.front+1) % MAX_PRINT_BUFFER;
 
 				OSIntCtxSw();                              /* Perform interrupt level ctx switch       */
             }
@@ -932,21 +911,11 @@ void  OS_Sched (void)
             OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
             OSCtxSwCtr++;                              /* Increment context switch counter             */
 			
-
-			if(needPrint_1 == 0)
-			{
-				timeStamp_1  = OSTimeGet();
-				needPrint_1 = 2;
-				from_1 = OSPrioCur;
-				to_1 = OSPrioHighRdy;
-			}
-			else if(needPrint_2 == 0)
-			{
-				timeStamp_2  = OSTimeGet();
-				needPrint_2 = 2;
-				from_2 = OSPrioCur;
-				to_2 = OSPrioHighRdy;
-			}
+			printBuffer.from[printBuffer.front] = OSPrioCur;
+			printBuffer.to[printBuffer.front] = OSPrioHighRdy;
+			printBuffer.timeStamp[printBuffer.front] = OSTimeGet();
+			printBuffer.isPreempted[printBuffer.front] = 0;
+			printBuffer.front = (printBuffer.front+1) % MAX_PRINT_BUFFER;
 			
             OS_TASK_SW();                              /* Perform a context switch                     */
         }

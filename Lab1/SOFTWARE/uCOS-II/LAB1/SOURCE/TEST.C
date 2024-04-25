@@ -19,7 +19,7 @@
 */
 
 #define  TASK_STK_SIZE                 512       /* Size of each task's stacks (# of WORDs)            */
-#define  N_TASKS                         3       /* Number of identical tasks                          */
+#define  N_TASKS                         2       /* Number of identical tasks                          */
 
 /*
 *********************************************************************************************************
@@ -38,26 +38,20 @@ OS_EVENT     *RandomSem;
 *********************************************************************************************************
 */
 
-        void  Task1(void *data);                       /* Function prototypes of tasks                  */
-		void  Task2(void *data);                       /* Function prototypes of tasks                  */
-		void  Task3(void *data);                       /* Function prototypes of tasks                  */
-        void  TaskStart(void *data);                  /* Function prototypes of Startup task           */
+
+//=================================================LAB_1=================================================
+        void  Task1(void *data);                       
+		void  Task2(void *data);                       
+		//void  Task3(void *data);                     
+        void  TaskStart(void *data);                  
 static  void  TaskStartCreateTasks(void);
-
-INT16U timeStamp_1;
-INT16U needPrint_1;
-INT16U from_1;
-INT16U to_1;
-
-INT16U timeStamp_2;
-INT16U needPrint_2;
-INT16U from_2;
-INT16U to_2;
 
 INT16U deadTime;
 INT16U deadTask;
 INT16U stopAllTask;
 
+PRINT_BUFFER printBuffer;
+//=================================================LAB_1=================================================
 
 
 /*$PAGE*/
@@ -94,34 +88,30 @@ void  TaskStart (void *pdata)
 #if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
     OS_CPU_SR  cpu_sr;
 #endif
-    char       s[100];
     INT16S     key;
-
-
-
-
     pdata = pdata;                                         /* Prevent compiler warning                 */
 
-	needPrint_1 = 0;
-	needPrint_2 = 0;
+	
 	deadTask = 0;
 	stopAllTask = 0;
+	printBuffer.rear = 0;
+	printBuffer.front = 0;
 
     OS_ENTER_CRITICAL();
     PC_VectSet(0x08, OSTickISR);                           /* Install uC/OS-II's clock tick ISR        */
     PC_SetTickRate(1);                                     /* Reprogram tick rate                      */
     OS_EXIT_CRITICAL();
 
-    OSStatInit();                                          /* Initialize uC/OS-II's statistics         */
-
-    TaskStartCreateTasks();                                /* Create all the application tasks         */
+    //OSStatInit();                                          /* Initialize uC/OS-II's statistics         */
 	
-	OSTimeSet(0);
 	
-
+	OSSchedLock();
+    TaskStartCreateTasks();         						 /* Create application tasks                 */
+    OSTimeSet(0);
+    OSSchedUnlock();
+	
+	OSTaskDel(OS_LOWEST_PRIO-1);
 	OSTaskDel(OS_PRIO_SELF);
-
-
 }
 
 
@@ -139,7 +129,7 @@ static  void  TaskStartCreateTasks (void)
 
     OSTaskCreate(Task1, (void *)0, &TaskStk[0][TASK_STK_SIZE - 1], 1);
 	OSTaskCreate(Task2, (void *)0, &TaskStk[1][TASK_STK_SIZE - 1], 2);
-	OSTaskCreate(Task3, (void *)0, &TaskStk[2][TASK_STK_SIZE - 1], 3);
+	//OSTaskCreate(Task3, (void *)0, &TaskStk[2][TASK_STK_SIZE - 1], 3);
 }
 
 /*
@@ -183,39 +173,19 @@ void  Task1 (void *pdata)
 				break;
 			}
 			
-			if(stopAllTask == 1)
-			{
-				break;
-			}
 			
-			if(needPrint_1 != 0 && stopAllTask == 0)
+			while(printBuffer.rear != printBuffer.front)
 			{
-				if(needPrint_1 == 1)
+				if(printBuffer.isPreempted[printBuffer.rear] == 1)
 				{
-					printf("%d\tPreempt\t\t%d\t%d\n", timeStamp_1,from_1,to_1);
-					needPrint_1 = 0;
+					printf("%d\tPreempt\t\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
-				else if(needPrint_1 == 2)
+				else
 				{
-					printf("%d\tComplete\t%d\t%d\n", timeStamp_1,from_1,to_1);
-					needPrint_1 = 0;
+					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
-			}
-			if(needPrint_2 != 0 && stopAllTask == 0)
-			{
-				if(needPrint_2 == 1)
-				{
-					printf("%d\tPreempt\t\t%d\t%d\n", timeStamp_2,from_2,to_2);
-					needPrint_2 = 0;
-				}
-				else if(needPrint_2 == 2)
-				{
-					printf("%d\tComplete\t%d\t%d\n", timeStamp_2,from_2,to_2);
-					needPrint_2 = 0;
-				}
-			}
-
-			               
+				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
+			}               
 		}
 		
 		if(stopAllTask == 1)
@@ -265,7 +235,7 @@ void  Task2 (void *pdata)
 	{
 		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
 		{
-			
+
 			if(deadTask != 0 && stopAllTask == 0)
 			{
 				stopAllTask = 1;
@@ -273,38 +243,19 @@ void  Task2 (void *pdata)
 				break;
 			}
 			
-			if(stopAllTask == 1)
-			{
-				break;
-			}
 			
-			if(needPrint_1 != 0 && stopAllTask == 0)
+			while(printBuffer.rear != printBuffer.front)
 			{
-				if(needPrint_1 == 1)
+				if(printBuffer.isPreempted[printBuffer.rear] == 1)
 				{
-					printf("%d\tPreempt\t\t%d\t%d\n", timeStamp_1,from_1,to_1);
-					needPrint_1 = 0;
+					printf("%d\tPreempt\t\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
-				else if(needPrint_1 == 2)
+				else
 				{
-					printf("%d\tComplete\t%d\t%d\n", timeStamp_1,from_1,to_1);
-					needPrint_1 = 0;
+					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
-			}
-			if(needPrint_2 != 0 && stopAllTask == 0)
-			{
-				if(needPrint_2 == 1)
-				{
-					printf("%d\tPreempt\t\t%d\t%d\n", timeStamp_2,from_2,to_2);
-					needPrint_2 = 0;
-				}
-				else if(needPrint_2 == 2)
-				{
-					printf("%d\tComplete\t%d\t%d\n", timeStamp_2,from_2,to_2);
-					needPrint_2 = 0;
-				}
-			}
-
+				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
+			}               
 		}
 		
 		if(stopAllTask == 1)
@@ -315,13 +266,12 @@ void  Task2 (void *pdata)
 		OS_ENTER_CRITICAL(); 
 		
 		end=OSTimeGet() ; // end time
-		toDelay=(OSTCBCur->period)-(end-start);
+		toDelay=(OSTCBCur->period)-(end-start) ;
 		start=start+(OSTCBCur->period) ; // next start time
 		OSTCBCur->compTime=C ;// reset the counter (c ticks for computation)
 		OSTCBCur->deadline=start+OSTCBCur->period;
 		
 		OS_EXIT_CRITICAL();
-		
 		
 
 		OSTimeDly (toDelay); // delay and wait (P-C) times
@@ -355,7 +305,7 @@ void  Task3 (void *pdata)
 	{
 		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
 		{
-			
+
 			if(deadTask != 0 && stopAllTask == 0)
 			{
 				stopAllTask = 1;
@@ -363,38 +313,19 @@ void  Task3 (void *pdata)
 				break;
 			}
 			
-			if(stopAllTask == 1)
-			{
-				break;
-			}
 			
-			if(needPrint_1 != 0 && stopAllTask == 0)
+			while(printBuffer.rear != printBuffer.front)
 			{
-				if(needPrint_1 == 1)
+				if(printBuffer.isPreempted[printBuffer.rear] == 1)
 				{
-					printf("%d\tPreempt\t\t%d\t%d\n", timeStamp_1,from_1,to_1);
-					needPrint_1 = 0;
+					printf("%d\tPreempt\t\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
-				else if(needPrint_1 == 2)
+				else
 				{
-					printf("%d\tComplete\t%d\t%d\n", timeStamp_1,from_1,to_1);
-					needPrint_1 = 0;
+					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
 				}
-			}
-			if(needPrint_2 != 0 && stopAllTask == 0)
-			{
-				if(needPrint_2 == 1)
-				{
-					printf("%d\tPreempt\t\t%d\t%d\n", timeStamp_2,from_2,to_2);
-					needPrint_2 = 0;
-				}
-				else if(needPrint_2 == 2)
-				{
-					printf("%d\tComplete\t%d\t%d\n", timeStamp_2,from_2,to_2);
-					needPrint_2 = 0;
-				}
-			}
-
+				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
+			}               
 		}
 		
 		if(stopAllTask == 1)
@@ -405,14 +336,12 @@ void  Task3 (void *pdata)
 		OS_ENTER_CRITICAL(); 
 		
 		end=OSTimeGet() ; // end time
-		toDelay=(OSTCBCur->period)-(end-start);
+		toDelay=(OSTCBCur->period)-(end-start) ;
 		start=start+(OSTCBCur->period) ; // next start time
 		OSTCBCur->compTime=C ;// reset the counter (c ticks for computation)
 		OSTCBCur->deadline=start+OSTCBCur->period;
 		
-		
 		OS_EXIT_CRITICAL();
-		
 		
 
 		OSTimeDly (toDelay); // delay and wait (P-C) times
