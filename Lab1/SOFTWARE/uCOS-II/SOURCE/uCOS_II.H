@@ -215,7 +215,11 @@ typedef struct
     INT16U  front;
 } PRINT_BUFFER;
 
-
+typedef struct {
+    INT16U   compTime;
+    INT16U   period;
+    INT16U   deadline;
+} TASK_INFO;
 //=================================================LAB_1=================================================
 
 
@@ -422,10 +426,6 @@ typedef struct os_tcb {
     INT8U          OSTCBY;             /* Index into ready table corresponding to task priority        */
     INT8U          OSTCBBitX;          /* Bit mask to access bit position in ready table               */
     INT8U          OSTCBBitY;          /* Bit mask to access bit position in ready group               */
-	
-	INT16U         compTime;          
-	INT16U         period;   
-	INT16U         deadline;  
 
 #if OS_TASK_DEL_EN > 0
     BOOLEAN        OSTCBDelReq;        /* Indicates whether a task needs to delete itself              */

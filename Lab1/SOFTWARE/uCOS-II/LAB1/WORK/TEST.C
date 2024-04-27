@@ -29,8 +29,18 @@
 
 OS_STK        TaskStk[N_TASKS][TASK_STK_SIZE];        /* Tasks stacks                                  */
 OS_STK        TaskStartStk[TASK_STK_SIZE];
+TASK_INFO  		TaskStart_Info;
+TASK_INFO  		Task_Info[N_TASKS];
 
-OS_EVENT     *RandomSem;
+INT16U           task1comp = 1;
+INT16U           task2comp = 3;
+INT16U           task3comp = 4;
+
+INT16U deadTime;
+INT16U deadTask;
+INT16U stopAllTask;
+
+PRINT_BUFFER printBuffer;
 
 /*
 *********************************************************************************************************
@@ -40,17 +50,12 @@ OS_EVENT     *RandomSem;
 
 
 //=================================================LAB_1=================================================
-        void  Task1(void *data);                       
-		void  Task2(void *data);                       
-		void  Task3(void *data);                     
+        void  Task(void *data);                                          
         void  TaskStart(void *data);                  
 static  void  TaskStartCreateTasks(void);
 
-INT16U deadTime;
-INT16U deadTask;
-INT16U stopAllTask;
 
-PRINT_BUFFER printBuffer;
+
 //=================================================LAB_1=================================================
 
 
@@ -70,9 +75,14 @@ void  main (void)
     PC_DOSSaveReturn();                                    /* Save environment to return to DOS        */
     PC_VectSet(uCOS, OSCtxSw);                             /* Install uC/OS-II's context switch vector */
 
-    RandomSem   = OSSemCreate(1);                          /* Random number semaphore                  */
 
-    OSTaskCreate(TaskStart, (void *)0, &TaskStartStk[TASK_STK_SIZE - 1], 0);
+    printBuffer.rear = 0;
+	printBuffer.front = 0;
+	
+	TaskStart_Info.compTime = 0;
+    TaskStart_Info.period = 65535;
+	TaskStart_Info.deadline = 0;
+	OSTaskCreateExt(TaskStart,(void *)0, &TaskStartStk[TASK_STK_SIZE - 1], 0, 0, &TaskStartStk[0], TASK_STK_SIZE, (void *)&TaskStart_Info, 0);
 	
     OSStart();                                             /* Start multitasking                       */
 }
@@ -125,11 +135,20 @@ void  TaskStart (void *pdata)
 
 static  void  TaskStartCreateTasks (void)
 {
-    INT8U  i;
-
-    OSTaskCreate(Task1, (void *)0, &TaskStk[0][TASK_STK_SIZE - 1], 1);
-	OSTaskCreate(Task2, (void *)0, &TaskStk[1][TASK_STK_SIZE - 1], 2);
-	//OSTaskCreate(Task3, (void *)0, &TaskStk[2][TASK_STK_SIZE - 1], 3);
+    Task_Info[0].compTime = 1;
+    Task_Info[0].period = 3;
+	Task_Info[0].deadline = 3;
+	OSTaskCreateExt(Task,(void *)&task1comp, &TaskStk[0][TASK_STK_SIZE - 1], 1, 1, &TaskStk[0][0], TASK_STK_SIZE, (void *)&Task_Info[0], 0);
+	
+	Task_Info[1].compTime = 3;
+    Task_Info[1].period = 6;
+	Task_Info[1].deadline = 6;
+	OSTaskCreateExt(Task,(void *)&task2comp, &TaskStk[1][TASK_STK_SIZE - 1], 2, 2, &TaskStk[1][0], TASK_STK_SIZE, (void *)&Task_Info[1], 0);
+	
+	//Task_Info[2].compTime = 4;
+    //Task_Info[2].period = 9;
+	//Task_Info[2].deadline = 9;
+	//OSTaskCreateExt(Task,(void *)&task3comp, &TaskStk[2][TASK_STK_SIZE - 1], 3, 3, &TaskStk[2][0], TASK_STK_SIZE, (void *)&Task_Info[2], 0);
 }
 
 /*
@@ -138,32 +157,22 @@ static  void  TaskStartCreateTasks (void)
 *********************************************************************************************************
 */
 
-void  Task1 (void *pdata)
+void  Task (void *pdata)
 {
-	int C = 1;
-	int P = 3; 
 
-    INT8U  err;
 	
 	int start; //the start time
 	int end; //the end time
 	int toDelay;
+	TASK_INFO* taskData;
 	
-	
-	OS_ENTER_CRITICAL(); 
-	
-	OSTCBCur->compTime=C;
-	OSTCBCur->period=P;
-	OSTCBCur->deadline=P;
 	start=0;
+	taskData = (TASK_INFO*)(OSTCBCur->OSTCBExtPtr);
 	
-	OS_EXIT_CRITICAL();
-	
-	
-	
+
 	while(stopAllTask == 0)
 	{
-		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
+		while(taskData->compTime>0 && stopAllTask == 0) //C ticks
 		{
 			if(stopAllTask == 1)
 			{
@@ -199,10 +208,10 @@ void  Task1 (void *pdata)
 		OS_ENTER_CRITICAL(); 
 		
 		end=OSTimeGet() ; // end time
-		toDelay=(OSTCBCur->period)-(end-start) ;
-		start=start+(OSTCBCur->period) ; // next start time
-		OSTCBCur->compTime=C ;// reset the counter (c ticks for computation)
-		OSTCBCur->deadline=start+OSTCBCur->period;
+		toDelay=(taskData->period)-(end-start) ;
+		start=start+(taskData->period) ; // next start time
+		taskData->compTime= *(INT16U *)pdata;// reset the counter (c ticks for computation)
+		taskData->deadline=start+taskData->period;
 		
 		OS_EXIT_CRITICAL();
 		
@@ -211,149 +220,4 @@ void  Task1 (void *pdata)
 	}
 	OSTaskDel(OS_PRIO_SELF);
 
-}
-
-void  Task2 (void *pdata)
-{
-	int C = 3;
-	int P = 6; 
-
-    INT8U  err;
-	
-	int start; //the start time
-	int end; //the end time
-	int toDelay;
-	
-	
-	OS_ENTER_CRITICAL(); 
-	
-	OSTCBCur->period=P;
-	OSTCBCur->compTime = C;
-	OSTCBCur->deadline=P;
-	start=0;
-	
-	OS_EXIT_CRITICAL();
-	
-	while(stopAllTask == 0)
-	{
-		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
-		{
-			if(stopAllTask == 1)
-			{
-				break;
-			}
-			
-			while(printBuffer.rear != printBuffer.front)
-			{
-				if(printBuffer.isPreempted[printBuffer.rear] == 1)
-				{
-					printf("%d\tPreempt\t\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
-				}
-				else
-				{
-					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
-				}
-				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
-			}      
-
-			if(deadTask != 0 && stopAllTask == 0)
-			{
-				stopAllTask = 1;
-				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
-				break;
-			}
-		}
-		
-		if(stopAllTask == 1)
-		{
-			break;
-		}
-		
-		OS_ENTER_CRITICAL(); 
-		
-		end=OSTimeGet() ; // end time
-		toDelay=(OSTCBCur->period)-(end-start) ;
-		start=start+(OSTCBCur->period) ; // next start time
-		OSTCBCur->compTime=C ;// reset the counter (c ticks for computation)
-		OSTCBCur->deadline=start+OSTCBCur->period;
-		
-		OS_EXIT_CRITICAL();
-		
-
-		OSTimeDly (toDelay); // delay and wait (P-C) times
-	}
-	OSTaskDel(OS_PRIO_SELF);
-}
-
-
-void  Task3 (void *pdata)
-{
-	int C = 4;
-	int P = 9; 
-
-    INT8U  err;
-	
-	int start; //the start time
-	int end; //the end time
-	int toDelay;
-	
-	
-	OS_ENTER_CRITICAL(); 
-	
-	OSTCBCur->period=P;
-	OSTCBCur->compTime = C;
-	OSTCBCur->deadline=P;
-	start=0;
-	
-	OS_EXIT_CRITICAL();
-	
-	while(stopAllTask == 0)
-	{
-		while(OSTCBCur->compTime>0 && stopAllTask == 0) //C ticks
-		{
-			if(stopAllTask == 1)
-			{
-				break;
-			}
-			
-			while(printBuffer.rear != printBuffer.front)
-			{
-				if(printBuffer.isPreempted[printBuffer.rear] == 1)
-				{
-					printf("%d\tPreempt\t\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
-				}
-				else
-				{
-					printf("%d\tComplete\t%d\t%d\n", printBuffer.timeStamp[printBuffer.rear],printBuffer.from[printBuffer.rear],printBuffer.to[printBuffer.rear]);
-				}
-				printBuffer.rear = (printBuffer.rear+1) % MAX_PRINT_BUFFER;
-			}      
-
-			if(deadTask != 0 && stopAllTask == 0)
-			{
-				stopAllTask = 1;
-				printf("time:%d task%d exced deadline\n", deadTime,deadTask);
-				break;
-			}
-		}
-		
-		if(stopAllTask == 1)
-		{
-			break;
-		}
-		
-		OS_ENTER_CRITICAL(); 
-		
-		end=OSTimeGet() ; // end time
-		toDelay=(OSTCBCur->period)-(end-start) ;
-		start=start+(OSTCBCur->period) ; // next start time
-		OSTCBCur->compTime=C ;// reset the counter (c ticks for computation)
-		OSTCBCur->deadline=start+OSTCBCur->period;
-		
-		OS_EXIT_CRITICAL();
-		
-
-		OSTimeDly (toDelay); // delay and wait (P-C) times
-	}
-	OSTaskDel(OS_PRIO_SELF);
 }

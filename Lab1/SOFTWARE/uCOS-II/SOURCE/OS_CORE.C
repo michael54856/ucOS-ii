@@ -404,14 +404,15 @@ void  OSTimeTick (void)
                 }
             }
 			
-			if (ptcb == OSTCBCur && ptcb->compTime > 0) {                        /* Check if this is the currently running task */
-                 (ptcb->compTime)--;                          /* Decrement compTime counter for the running task */
+			if (ptcb == OSTCBCur && ptcb->OSTCBExtPtr && ((TASK_INFO*)(ptcb->OSTCBExtPtr))->compTime > 0)  /* Check if this is the currently running task */
+			{                        
+                 (((TASK_INFO*)(ptcb->OSTCBExtPtr))->compTime)--;                        	 		       /* Decrement compTime counter for the running task */
             }
 			
 			
-			 if(ptcb->OSTCBPrio >= 1 && ptcb->OSTCBPrio <= 3 && currentTime >= ptcb->deadline &&  ptcb->compTime > 0)
+			 if(ptcb->OSTCBPrio >= 1 && ptcb->OSTCBPrio <= 3 && currentTime >= ((TASK_INFO*)(ptcb->OSTCBExtPtr))->deadline && ((TASK_INFO*)(ptcb->OSTCBExtPtr))->compTime > 0)
 			 {
-				 deadTime = ptcb->deadline;
+				 deadTime = ((TASK_INFO*)(ptcb->OSTCBExtPtr))->deadline;
 				 deadTask = ptcb->OSTCBPrio;
 			 }
 			 
